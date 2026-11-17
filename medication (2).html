@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Care Home Medication Manager</title>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: "Segoe UI", Arial, sans-serif; margin: 0; background: linear-gradient(135deg, #e0f7fa 0%, #f3e5f5 50%, #fff3e0 100%); background-attachment: fixed; color: #263238; min-height: 100vh; }
+
+  /* ---------- floating pills (decoration) ---------- */
+  .pill { position: absolute; width: 80px; height: 30px; border-radius: 15px; opacity: .85; animation: float 7s ease-in-out infinite; box-shadow: 0 4px 10px rgba(0,0,0,.2); }
+  .p1 { background: linear-gradient(90deg,#ff6b6b 50%,#fff 50%); top: 8%;  left: 6%;  transform: rotate(-30deg); }
+  .p2 { background: linear-gradient(90deg,#ffd54f 50%,#ff9800 50%); top: 18%; right: 8%; transform: rotate(40deg); animation-delay: 1s; }
+  .p3 { background: linear-gradient(90deg,#4dd0e1 50%,#fff 50%); bottom: 12%; left: 10%; transform: rotate(25deg); animation-delay: 2s; }
+  .p4 { background: linear-gradient(90deg,#b388ff 50%,#fff 50%); bottom: 20%; right: 12%; transform: rotate(-45deg); animation-delay: 3s; }
+  .p5 { background: linear-gradient(90deg,#69f0ae 50%,#fff 50%); top: 55%; left: 3%; transform: rotate(60deg); animation-delay: 4s; width: 60px; height: 24px; }
+  .tab-dot { position: absolute; width: 36px; height: 36px; border-radius: 50%; background: #fff; border: 4px solid #ffd54f; opacity: .85; animation: float 8s ease-in-out infinite; }
+  .d1 { top: 35%; right: 5%; } .d2 { bottom: 6%; left: 45%; border-color: #ff6b6b; animation-delay: 2s; }
+  @keyframes float { 0%,100% { margin-top: 0; } 50% { margin-top: -22px; } }
+
+  /* ---------- login ---------- */
+  #login { position: fixed; inset: 0; background: linear-gradient(135deg, #00b4a6 0%, #5b6cff 55%, #c850c0 100%); display: flex; align-items: center; justify-content: center; overflow: hidden; z-index: 5; }
+  #login .box { position: relative; z-index: 2; background: #fff; border-radius: 22px; padding: 30px 28px; width: 92%; max-width: 360px; text-align: center; box-shadow: 0 15px 40px rgba(0,0,0,.3); }
+  #login h2 { margin: 8px 0 2px; color: #3f3d99; }
+  #login .sub { margin: 0 0 18px; color: #78909c; font-size: 14px; }
+  #login input { margin-bottom: 12px; }
+  #login .go { width: 100%; background: linear-gradient(90deg, #00b4a6, #5b6cff); color: #fff; border: 0; padding: 12px; border-radius: 25px; font-size: 16px; font-weight: bold; cursor: pointer; }
+  #login .go:hover { filter: brightness(1.1); }
+
+  /* ---------- header ---------- */
+  header { background: linear-gradient(90deg, #00b4a6, #5b6cff, #c850c0); color: #fff; padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; box-shadow: 0 3px 10px rgba(0,0,0,.2); }
+  .brand { display: flex; align-items: center; gap: 10px; }
+  .brand h1 { font-size: 18px; margin: 0; }
+  .brand small { opacity: .9; }
+  header button { background: rgba(255,255,255,.2); color: #fff; border: 2px solid rgba(255,255,255,.6); padding: 8px 14px; border-radius: 20px; cursor: pointer; margin: 2px 3px; font-weight: bold; }
+  header button:hover { background: rgba(255,255,255,.35); }
+  header button.active { background: #ffd54f; color: #4e342e; border-color: #ffd54f; }
+
+  main { max-width: 1000px; margin: 20px auto; padding: 0 12px; position: relative; z-index: 1; }
+  .card { background: #fff; border-radius: 16px; padding: 18px; margin-bottom: 18px; box-shadow: 0 4px 14px rgba(0,0,0,.1); border-top: 6px solid #00b4a6; }
+  #page-meds .card { border-top-color: #9c6bff; }
+  #page-chart .card { border-top-color: #ff9800; }
+  h2 { margin-top: 0; font-size: 18px; color: #37474f; }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; }
+  input, select, textarea { width: 100%; padding: 10px; border: 2px solid #cfd8dc; border-radius: 10px; font-size: 14px; font-family: inherit; }
+  input:focus, select:focus, textarea:focus { outline: 0; border-color: #5b6cff; box-shadow: 0 0 0 3px rgba(91,108,255,.2); }
+  button.primary { background: linear-gradient(90deg, #00b4a6, #5b6cff); color: #fff; border: 0; padding: 11px 22px; border-radius: 22px; cursor: pointer; margin-top: 10px; font-weight: bold; }
+  button.primary:hover { filter: brightness(1.1); }
+  button.small { padding: 6px 12px; border: 0; border-radius: 14px; cursor: pointer; color: #fff; font-weight: bold; }
+  .green { background: #2e9e5b; } .red { background: #e53935; } .grey { background: #ef8f00; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th, td { text-align: left; padding: 10px 8px; border-bottom: 1px solid #eceff1; }
+  th { background: linear-gradient(90deg, #e0f7fa, #ede7f6); color: #37474f; }
+  tr:hover td { background: #fafbff; }
+  .badge { padding: 4px 10px; border-radius: 12px; font-size: 12px; color: #fff; font-weight: bold; white-space: nowrap; }
+  .b-GIVEN { background: #2e9e5b; } .b-NOT_GIVEN { background: #ef8f00; } .b-NOT_RECORDED { background: #e53935; }
+  tr.missing td { background: #fff1f1; }
+  .error { color: #e53935; margin-top: 8px; font-weight: bold; }
+  .scroll { overflow-x: auto; }
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+
+<!-- ================= LOGIN ================= -->
+<div id="login">
+  <div class="pill p1"></div><div class="pill p2"></div><div class="pill p3"></div>
+  <div class="pill p4"></div><div class="pill p5"></div>
+  <div class="tab-dot d1"></div><div class="tab-dot d2"></div>
+  <div class="box">
+    <svg width="76" height="76" viewBox="0 0 64 64">
+      <g transform="rotate(-40 32 32)">
+        <path d="M32 18h12a14 14 0 0 1 0 28H32z" fill="#ff6b6b"/>
+        <path d="M32 18H20a14 14 0 0 0 0 28h12z" fill="#4dd0e1"/>
+        <rect x="18" y="24" width="28" height="5" rx="2.5" fill="#fff" opacity=".5"/>
+      </g>
+      <rect x="44" y="4" width="14" height="14" rx="3" fill="#69f0ae"/>
+      <path d="M49 6h4v3h3v4h-3v3h-4v-3h-3V9h3z" fill="#fff"/>
+    </svg>
+    <h2 id="home-name">Care Home</h2>
+    <p class="sub">Medication Management &bull; Staff Login</p>
+    <input id="lu" placeholder="Username" autocomplete="off">
+    <input id="lp" type="password" placeholder="Password">
+    <button class="go" onclick="login()">Login</button>
+    <div id="lerr" class="error"></div>
+  </div>
+</div>
+
+<!-- ================= APP ================= -->
+<div id="app" class="hidden">
+  <header>
+    <div class="brand">
+      <svg width="38" height="38" viewBox="0 0 64 64">
+        <g transform="rotate(-40 32 32)">
+          <path d="M32 14h14a18 18 0 0 1 0 36H32z" fill="#ff8a80"/>
+          <path d="M32 14H18a18 18 0 0 0 0 36h14z" fill="#fff"/>
+        </g>
+      </svg>
+      <div><h1 id="app-name">Care Home</h1><small>Medication Manager</small></div>
+    </div>
+    <div>
+      <button id="tab-patients" onclick="show('patients')">🧑‍⚕️ Patients</button>
+      <button id="tab-meds" onclick="show('meds')">💊 Medicines</button>
+      <button id="tab-chart" onclick="show('chart')">📋 Daily Chart</button>
+      <button onclick="logout()">🚪 Logout</button>
+    </div>
+  </header>
+
+  <main>
+    <!-- PAGE 1: PATIENTS -->
+    <section id="page-patients">
+      <div class="card">
+        <h2>🧑‍⚕️ Add Patient</h2>
+        <div class="grid">
+          <input id="p-name" placeholder="Patient name *">
+          <input id="p-age" type="number" placeholder="Age">
+          <select id="p-gender"><option value="">Gender</option><option>Male</option><option>Female</option><option>Other</option></select>
+          <input id="p-room" placeholder="Room number *">
+          <input id="p-bed" placeholder="Bed number *">
+        </div>
+        <p><textarea id="p-notes" rows="2" placeholder="Notes (allergies, conditions, doctor...)"></textarea></p>
+        <button class="primary" onclick="addPatient()">Save Patient</button>
+        <div id="p-err" class="error"></div>
+      </div>
+      <div class="card scroll">
+        <h2>🛏️ All Patients</h2>
+        <table>
+          <thead><tr><th>Room</th><th>Bed</th><th>Name</th><th>Age</th><th>Gender</th><th>Notes</th><th></th></tr></thead>
+          <tbody id="patient-rows"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- PAGE 2: MEDICINES -->
+    <section id="page-meds" class="hidden">
+      <div class="card">
+        <h2>💊 Add Medicine for a Patient</h2>
+        <p><select id="m-patient" onchange="loadMeds()"></select></p>
+        <div class="grid">
+          <input id="m-name" placeholder="Medicine name *">
+          <input id="m-dose" placeholder="Dosage (e.g. 500 mg) *">
+          <input id="m-time" placeholder="Time (e.g. 08:00 / Morning) *">
+          <input id="m-inst" placeholder="Instructions (after food...)">
+        </div>
+        <button class="primary" onclick="addMed()">Add Medicine</button>
+        <div id="m-err" class="error"></div>
+      </div>
+      <div class="card scroll">
+        <h2>🧾 Medicines for selected patient</h2>
+        <table>
+          <thead><tr><th>Medicine</th><th>Dosage</th><th>Time</th><th>Instructions</th><th></th></tr></thead>
+          <tbody id="med-rows"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- PAGE 3: DAILY CHART -->
+    <section id="page-chart" class="hidden">
+      <div class="card scroll">
+        <h2>📋 Daily Medication Chart</h2>
+        <p>Date: <input id="c-date" type="date" style="width:auto" onchange="loadChart()">
+           <span id="c-summary" style="margin-left:12px;font-weight:bold"></span></p>
+        <table>
+          <thead><tr><th>Room</th><th>Bed</th><th>Patient</th><th>Medicine</th><th>Dosage</th><th>Time</th><th>Status</th><th>Recorded by</th><th>Action</th></tr></thead>
+          <tbody id="chart-rows"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script>
+/* ============ SETTINGS (change these for your care home) ============ */
+var HOME_NAME = 'Sunrise Old Age Home';   // <-- type your old age home name here
+var USERNAME  = 'admin';                  // login username
+var PASSWORD  = 'admin123';               // login password
+
+$('home-name').textContent = HOME_NAME;
+$('app-name').textContent = HOME_NAME;
+
+/* ============ DATABASE (saved inside this browser) ============ */
+var KEY = 'caredb_v2';
+function loadDB() {
+  var raw = localStorage.getItem(KEY);
+  if (raw) return JSON.parse(raw);
+  return { patients: [], medications: [], log: [], nextId: 1 };
+}
+function saveDB() { localStorage.setItem(KEY, JSON.stringify(db)); }
+var db = loadDB();
+var currentUser = sessionStorage.getItem('user');
+
+function $(id) { return document.getElementById(id); }
+function esc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+  });
+}
+function newId() { var id = db.nextId; db.nextId++; return id; }
+
+/* ============ LOGIN ============ */
+function login() {
+  if ($('lu').value.trim() !== USERNAME || $('lp').value !== PASSWORD) {
+    $('lerr').textContent = 'Wrong username or password'; return;
+  }
+  currentUser = USERNAME; sessionStorage.setItem('user', USERNAME);
+  $('lp').value = ''; $('lerr').textContent = '';
+  start();
+}
+function logout() { sessionStorage.removeItem('user'); currentUser = null; location.reload(); }
+$('lp').addEventListener('keydown', function (e) { if (e.key === 'Enter') login(); });
+
+function start() {
+  $('login').classList.add('hidden'); $('app').classList.remove('hidden');
+  $('c-date').value = new Date().toISOString().slice(0, 10);
+  show('patients');
+}
+
+/* ============ NAVIGATION ============ */
+function show(page) {
+  ['patients', 'meds', 'chart'].forEach(function (p) {
+    $('page-' + p).classList.toggle('hidden', p !== page);
+    $('tab-' + p).classList.toggle('active', p === page);
+  });
+  if (page === 'patients') loadPatients();
+  if (page === 'meds') loadPatientSelect();
+  if (page === 'chart') loadChart();
+}
+
+/* ============ PATIENTS ============ */
+function sortedPatients() {
+  return db.patients.slice().sort(function (a, b) {
+    return (a.room_no + '|' + a.bed_no).localeCompare(b.room_no + '|' + b.bed_no, undefined, { numeric: true });
+  });
+}
+function loadPatients() {
+  $('patient-rows').innerHTML = sortedPatients().map(function (p) {
+    return '<tr><td>' + esc(p.room_no) + '</td><td>' + esc(p.bed_no) + '</td><td>' + esc(p.name) +
+      '</td><td>' + esc(p.age) + '</td><td>' + esc(p.gender) + '</td><td>' + esc(p.notes) +
+      '</td><td><button class="small red" onclick="delPatient(' + p.id + ')">Delete</button></td></tr>';
+  }).join('') || '<tr><td colspan="7">No patients yet</td></tr>';
+}
+function addPatient() {
+  var name = $('p-name').value.trim(), room = $('p-room').value.trim(), bed = $('p-bed').value.trim();
+  if (!name || !room || !bed) { $('p-err').textContent = 'Name, room number and bed number are required'; return; }
+  var taken = db.patients.some(function (p) { return p.room_no === room && p.bed_no === bed; });
+  if (taken) { $('p-err').textContent = 'That room and bed is already given to another patient'; return; }
+  db.patients.push({
+    id: newId(), name: name, age: $('p-age').value, gender: $('p-gender').value,
+    room_no: room, bed_no: bed, notes: $('p-notes').value
+  });
+  saveDB();
+  ['p-name', 'p-age', 'p-gender', 'p-room', 'p-bed', 'p-notes'].forEach(function (i) { $(i).value = ''; });
+  $('p-err').textContent = ''; loadPatients();
+}
+function delPatient(id) {
+  if (!confirm('Delete this patient and all their medicines?')) return;
+  var medIds = db.medications.filter(function (m) { return m.patient_id === id; }).map(function (m) { return m.id; });
+  db.patients = db.patients.filter(function (p) { return p.id !== id; });
+  db.medications = db.medications.filter(function (m) { return m.patient_id !== id; });
+  db.log = db.log.filter(function (l) { return medIds.indexOf(l.medication_id) === -1; });
+  saveDB(); loadPatients();
+}
+
+/* ============ MEDICINES ============ */
+function loadPatientSelect() {
+  $('m-patient').innerHTML = sortedPatients().map(function (p) {
+    return '<option value="' + p.id + '">Room ' + esc(p.room_no) + ' / Bed ' + esc(p.bed_no) + ' - ' + esc(p.name) + '</option>';
+  }).join('');
+  loadMeds();
+}
+function loadMeds() {
+  var id = Number($('m-patient').value);
+  if (!id) { $('med-rows').innerHTML = '<tr><td colspan="5">Add a patient first</td></tr>'; return; }
+  $('med-rows').innerHTML = db.medications.filter(function (m) { return m.patient_id === id; }).map(function (m) {
+    return '<tr><td>' + esc(m.medicine_name) + '</td><td>' + esc(m.dosage) + '</td><td>' + esc(m.time_slot) +
+      '</td><td>' + esc(m.instructions) + '</td><td><button class="small red" onclick="delMed(' + m.id + ')">Remove</button></td></tr>';
+  }).join('') || '<tr><td colspan="5">No medicines added</td></tr>';
+}
+function addMed() {
+  var id = Number($('m-patient').value);
+  if (!id) { $('m-err').textContent = 'Select a patient first'; return; }
+  var name = $('m-name').value.trim(), dose = $('m-dose').value.trim(), time = $('m-time').value.trim();
+  if (!name || !dose || !time) { $('m-err').textContent = 'Medicine name, dosage and time are required'; return; }
+  db.medications.push({ id: newId(), patient_id: id, medicine_name: name, dosage: dose, time_slot: time, instructions: $('m-inst').value });
+  saveDB();
+  ['m-name', 'm-dose', 'm-time', 'm-inst'].forEach(function (i) { $(i).value = ''; });
+  $('m-err').textContent = ''; loadMeds();
+}
+function delMed(id) {
+  if (!confirm('Remove this medicine?')) return;
+  db.medications = db.medications.filter(function (m) { return m.id !== id; });
+  db.log = db.log.filter(function (l) { return l.medication_id !== id; });
+  saveDB(); loadMeds();
+}
+
+/* ============ DAILY CHART ============ */
+var LABELS = { GIVEN: '✔ Given', NOT_GIVEN: '✖ Not given', NOT_RECORDED: '⚠ NOT RECORDED' };
+function loadChart() {
+  var date = $('c-date').value;
+  var rows = [];
+  sortedPatients().forEach(function (p) {
+    db.medications.filter(function (m) { return m.patient_id === p.id; }).forEach(function (m) {
+      var l = db.log.filter(function (x) { return x.medication_id === m.id && x.date === date; })[0];
+      rows.push({ p: p, m: m, status: l ? l.status : 'NOT_RECORDED', by: l ? l.recorded_by : '' });
+    });
+  });
+  var missing = rows.filter(function (r) { return r.status === 'NOT_RECORDED'; }).length;
+  $('c-summary').textContent = rows.length + ' medicines, ' + missing + ' not yet recorded';
+  $('c-summary').style.color = missing ? '#e53935' : '#2e9e5b';
+  $('chart-rows').innerHTML = rows.map(function (r) {
+    return '<tr class="' + (r.status === 'NOT_RECORDED' ? 'missing' : '') + '"><td>' + esc(r.p.room_no) +
+      '</td><td>' + esc(r.p.bed_no) + '</td><td>' + esc(r.p.name) + '</td><td>' + esc(r.m.medicine_name) +
+      '</td><td>' + esc(r.m.dosage) + '</td><td>' + esc(r.m.time_slot) +
+      '</td><td><span class="badge b-' + r.status + '">' + LABELS[r.status] + '</span></td><td>' + esc(r.by) +
+      '</td><td><button class="small green" onclick="mark(' + r.m.id + ',\'GIVEN\')">Given</button> ' +
+      '<button class="small grey" onclick="mark(' + r.m.id + ',\'NOT_GIVEN\')">Not given</button></td></tr>';
+  }).join('') || '<tr><td colspan="9">No medicines scheduled</td></tr>';
+}
+function mark(medId, status) {
+  var date = $('c-date').value, remarks = '';
+  if (status === 'NOT_GIVEN') remarks = prompt('Reason why it was not given:') || '';
+  var existing = db.log.filter(function (x) { return x.medication_id === medId && x.date === date; })[0];
+  if (existing) {
+    existing.status = status; existing.remarks = remarks;
+    existing.recorded_by = currentUser; existing.recorded_at = new Date().toISOString();
+  } else {
+    db.log.push({ medication_id: medId, date: date, status: status, remarks: remarks,
+                  recorded_by: currentUser, recorded_at: new Date().toISOString() });
+  }
+  saveDB(); loadChart();
+}
+
+/* ============ START ============ */
+if (currentUser) start();
+</script>
+</body>
+</html>
